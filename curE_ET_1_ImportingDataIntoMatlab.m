@@ -6,9 +6,11 @@
 % At the end, save all participants' data into one big csv files
 % /!\ can easily make your matlab crash or even your computer shut down --
 % this is the most memory/energy consuming step.
-% Pretty long if not using parelle processing
+% Pretty long if not using parellel processing
 %
 
+clear all
+close all
 
 %% Define important variables
 visit        = 1;        % 1/2/3
@@ -16,16 +18,15 @@ flagParallel = true;     % false/true
 
 
 %% Define more things
-addpath("src");
-addpath(genpath(fullfile("src","libraries")));
-% Paths (normally no need to change)
+% Define input/output paths (normally no need to change)
 pathData           = [filesep, fullfile('Users',getenv('USER'),'Data','curE',sprintf('Visit%d',visit),'eyetracking')];
 pathDataEdfIn      = fullfile(pathData, sprintf('0_edf-visit%d',visit));
 pathDataMatOut     = fullfile(pathData, sprintf('1_mat-visit%d',visit));
 pathDataCsvOut     = fullfile(pathData, sprintf('2_csv-visit%d',visit));
 pathDataSummaryOut = fullfile(pathData, sprintf('3_whole-group-visit%d',visit));
-% Parallel processing or not
-fSetUpFieldtripAndParallelPool(flagParallel=flagParallel);
+% Add paths and parallel processing or not
+addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel, flagLibraries=true, flagFT=false);
 % For the outputs: make the folders or prompt to empty it if files are detected
 util.fMkDirSafe(pathDataMatOut);
 util.fMkDirSafe(pathDataCsvOut);
@@ -77,11 +78,11 @@ getCsvFromFolderMat(postMatFolder, csvfolder=pathDataCsvOut, ROI=ROI, roiFrom="r
 clear postMatFolder
 
 %% Load indiv CSVs into one big whole-group table
-% /!\ Used to make Matlab crash, by far the most memory consuming step
-% Ok with less workers; this might be computer-dependent, adapt if too much
+% /!\ This used to make Matlab crash, by far the most memory consuming step
+% -> using less workers -> ok
 delete(gcp("nocreate"));
 if flagParallel
-    p = parpool(4); % using less workers or the computer crashes -- ADAPT if still too much for you
+    p = parpool(4); % using less workers or the computer crashes -- ADAPT if still too much for your computer
 end
 fprintf("Now reading the individual csv files into one big table (this also takes a while).... \n");
 T = readcsvBatch(pathDataCsvOut, "stringType", "string");        %import the data into one big table

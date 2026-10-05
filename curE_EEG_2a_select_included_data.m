@@ -31,14 +31,16 @@ min_N_trials_per_condition = 6;
 
 
 %% Define more stuff
-addpath("src")
-fSetUpFieldtripAndParallelPool(flagParallel=flagParallel,flagFT=flagFT)
+% Define input/output paths (normally no need to change)
 pathVisit      = fullfile('Users',getenv('USER'),'Data','curE',sprintf('Visit%d', visit));
 pathData       = filesep + fullfile(pathVisit, erpType);
 dirDataMatIn   = "1_matFiles";
 dirDataInclOut = "2_matIncluded";
-util.fMkDirSafe(fullfile(pathData, dirDataInclOut)); % make the folder, or prompt to empty the folder if files are detected in
-% fSetUpFieldtrip
+% Add paths, parallel processing or not, and start FieldTrip
+addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel, flagFT=flagFT);
+% For the outputs: make the folders or prompt to empty it if files are detected
+util.fMkDirSafe(fullfile(pathData, dirDataInclOut));
 
 matnames       = string({dir(fullfile(pathData, dirDataMatIn, "*.mat")).name});
 nSubj          = numel(matnames);
@@ -79,11 +81,11 @@ if isfile(table_path)
     % look for disrepancies
     if any(tblIncl.inclMinTrials ~= tblIncl.inclManual)
         dictDisrepancy = dictionary('0',sprintf('excluded (by both EGI manual & Matlab auto. [min. %d trials] rejection)', min_N_trials_per_condition),...
-            '1',sprintf('included (by Matlab auto. [min. %d trials] but not EGI manual rejection)', min_N_trials_per_condition),...
-            '2',sprintf('included (EGI manual but not Matlab auto. [min. %d trials] rejection)', min_N_trials_per_condition),...
+            '1',sprintf('excluded (by EGI manual but not by Matlab auto. [min. %d trials] rejection)', min_N_trials_per_condition),...
+            '2',sprintf('excluded (by Matlab auto. [min. %d trials] but not by EGI manual rejection)', min_N_trials_per_condition),...
             '3',sprintf('included (by both EGI manual & Matlab auto. [min. %d trials] rejection)', min_N_trials_per_condition));
         tblIncl.disrepancy = dictDisrepancy(tblIncl.inclMinTrials + 2*tblIncl.inclManual);
-        warning("discrepency between EGI manual & Matlab auto. inclusions in %d subjects (manual rejection takes precedence):", sum(tblIncl.inclMinTrials ~= tblIncl.inclManual));
+        warning("discrepency between EGI manual & Matlab auto. inclusions in %d subjects (need to be included by both):", sum(tblIncl.inclMinTrials ~= tblIncl.inclManual));
         disp(tblIncl(tblIncl.inclMinTrials ~= tblIncl.inclManual, :))
     end
     ids_included = tblIncl.id(tblIncl.inclMinTrials & tblIncl.inclManual);

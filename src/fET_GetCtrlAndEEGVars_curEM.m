@@ -1,4 +1,4 @@
-function [ctrl_vars, eegData, eegETsessions] = fGetCtrlAndEEGVars_curEM(visit, sessions, opts)
+function [ctrl_vars, eegData, eegETsessions] = fET_GetCtrlAndEEGVars_curEM(visit, sessions, opts)
 
 arguments
     visit (1,1) int8 {mustBeMember(visit, [1 2 3])}
@@ -17,6 +17,7 @@ eegETsessions = sessions(ismember(sessions,eegSessions));
 % Load ctrl variables data, add a variable for whether subjects were included in EEG nalysis at 12m, and save
 ctrl_vars = readtable(fullfile(opts.pathDataRoot,opts.ctrlVars_filename));
 ctrl_vars.session = categorical(ctrl_vars.session);
+ctrl_vars = renamevars(ctrl_vars,"slope_accuracy","performance_slopeAccu");
 ctrl_vars.isInEEGAnalysis12m = ismember(ctrl_vars.session,eegSessions);
 writetable(ctrl_vars, fullfile(opts.pathDataRoot,'curio_extraVars_curEM.csv'));
 ctrl_vars = ctrl_vars(ismember(ctrl_vars.session,eegETsessions),:);

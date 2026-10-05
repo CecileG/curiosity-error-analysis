@@ -1,6 +1,6 @@
 % Make regression plots between variables for 2 groups overlayed
 
-function fET_plotAndSave_Regressions(T, pathFiguresPng, pathFiguresSvg, groups, variables, labels)
+function fET_PlotAndSave_Regressions(T, pathFiguresPng, pathFiguresSvg, groups, variables, labels)
 
 data1 = T.(variables{1});
 data2 = T.(variables{2});

@@ -12,8 +12,10 @@ if isfolder(pathdir)
         "Q to abort\n[YNQ]:", pathdir);
     if ~isempty(setdiff(string({dir(fullfile(pathdir, opts.filePattern)).name}), ["." ".."]))
         if opts.flagCleanDir == "force_clean" || opts.flagCleanDir == "ask_and_clean"
-            warn_delete_old = input(prompt_,'s');
-            if strcmpi(warn_delete_old, 'y')
+            if opts.flagCleanDir == "ask_and_clean"
+                warn_delete_old = input(prompt_,'s');
+            end
+            if opts.flagCleanDir == "force_clean" || strcmpi(warn_delete_old, 'y')
                 disp("proceeding - removing everything in destination folder")
                 system("rm -rf " + fullfile(pathdir, opts.filePattern));
             elseif strcmpi(warn_delete_old, 'n')

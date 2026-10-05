@@ -34,13 +34,12 @@ close all
 visit                = 1;      % Which visit? (12m/a = 1; 18m/b = 2; 24m/c = 3)
 erptype              = 'ERN';  % Which type of ERP? ('ERN' or 'FRN')      /!\ always start with ERN before FRN (need it to calculate BL values)
 flagCommon           = 1;      % if both ern and frn data has been cleaned for this visit, use the trials common to both datasets
+flagParallel         = false;  % here we didn't parallelise anyway
 
 %% Define and load more things -- no need to change in theory
-% -- Electrodes of interest
-% We're using this to calculate the ERPs
+% -- Electrodes of interest (we're using this to calculate the ERPs)
 channelsROI = [4,5,10,11,12,16,18,19];     % FC elec (Goupil)
 % channelsROI = [71,72,75,76, 67,74,77,82]; % Occ elec (can be used for data quality checks)
-
 % -- Time windows for the analysis
 % We're using this to plot topographies + extract peak values for stats csv
 % file (needs 2 time windows, else adapt the script for more flexibility)
@@ -54,11 +53,9 @@ end
 % We always use the ERN window for this: FRN loads the values calculated
 % from ERN -> always run ERN before FRN
 BL  = [-0.298 -.150];
-
 % -- Other things
 visitLetterList = {'a','b','c'}; visitLetter = visitLetterList{visit};
 difficulties    = {"Easy", "Medium", "Hard", "xHard","Harder"};
-
 % -- Data folders
 % In theory, no need to edit this -- keep the same structure and modify
 % your local folder tree for compatibility
@@ -73,19 +70,21 @@ dirDataMatOut4 = "5_WholeTimelineForRef";
 if flagCommon
     dirDataMatIn = dirDataMatIn + "Common";
 end
+% -- Add paths, parallel processing or not, and start FieldTrip
+addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel, flagFT=true);
+% -- For the outputs: make the folders or prompt to empty it if files are detected
 util.fMkDirSafe(fullfile(pathData, dirDataMatOut1));
 util.fMkDirSafe(fullfile(pathData, dirDataMatOut2));
 util.fMkDirSafe(fullfile(pathData, dirDataMatOut3));
 util.fMkDirSafe(fullfile(pathData, dirDataMatOut4));
-if strcmp(erptype,'FRN') & ~isnan(BL(1))
+% -- Load data
+if strcmp(erptype,'FRN') & ~isnan(BL(1)) % load ERN baselines if using FRN
     load(fullfile(pathDataERN, dirDataMatOut2,sprintf("BL_valuesFromERN_%d_%d.mat",BL(1)*1000,BL(2)*1000)));
 end
 tblGroups   = readtable([filesep, fullfile(pathDataRoot,'curio_groups.csv')]);
 filenames_  = string({dir(fullfile(pathData, dirDataMatIn, "*.mat")).name});
 
-% Set things up
-addpath("src")
-fSetUpFieldtripAndParallelPool(flagParallel=false,flagFT=true)
 
 %% Load data per subject, compute ERPs, save data
 for iFile = numel(filenames_):-1:1
@@ -95,7 +94,6 @@ for iFile = numel(filenames_):-1:1
     % Add info about difficulty level and subjID
     data.trialinfo.diff = tblMetadata.mffkey_diff;
     data.subjID         = tblMetadata.id(1);
-
     % Baseline (if FRN: use the ERN window -> need to run the ERN first)
     if  ~isnan(BL(1))
         if strcmp(erptype,'ERN')
@@ -114,7 +112,6 @@ for iFile = numel(filenames_):-1:1
     else
         dataBLned = data; % skip BLine
     end
-
     % Compute within participant averages per condition (whole scalp)
     cfg                  = []; % correct
     cfg.trials           = dataBLned.trialinfo.accu==1;
@@ -133,7 +130,6 @@ for iFile = numel(filenames_):-1:1
     % cfg.showoutline = 'yes';
     % ft_multiplotER(cfg, correct, incorrect)
     % ft_multiplotER(cfg, difference)
-
     % Same per difficulty level AND per condition
     byDiff = struct;
     byDiff.difficulties = difficulties; % keep a trace of how we ordered the difficulty levels
@@ -167,7 +163,6 @@ for iFile = numel(filenames_):-1:1
             byDiff.difference(iDiff+1) = difference; byDiff.difference(iDiff+1) = [];
         end
     end
-
     % Save avg values per subject in Fieldtrip mat file + other variables
     filenameERP = strsplit(filename,'.mat');
     if length(filenameERP) > 1
@@ -177,7 +172,6 @@ for iFile = numel(filenames_):-1:1
     if ~strcmp(getenv('USER'), 'dim-ask')
         save(fullfile(pathData,dirDataMatOut1,filenameERP),"correct","incorrect","difference")
     end
-
     % Figure out groups
     subjID(iFile,1) = tblMetadata.id(1);
     groups(iFile,1) = subjID(iFile);
@@ -187,7 +181,6 @@ for iFile = numel(filenames_):-1:1
     else
         groups(iFile,3) = strcmp(tblGroups.mirror{tblGroups.subjNb == double(subjID(iFile))}, 'R');
     end
-
     % Also save in a big structure with all the subjects at once for
     % plotting
     Correct_allSubj{1,iFile}    = correct;
@@ -200,12 +193,10 @@ for iFile = numel(filenames_):-1:1
         byDiff_allSubj.NtrialsCorr{iDiff,iFile}   = byDiff.NtrialsCorr(iDiff);
         byDiff_allSubj.NtrialsIncorr{iDiff,iFile} = byDiff.NtrialsIncorr(iDiff);
     end
-
     % Export per trial data for the channels OI (optional -- for plotting indiv ERPs)
     Correct_allSubj_allTrials{1,iFile}    = cell2mat(cellfun(@(x) mean(x(channelsROI, :), 1)', corrTrials.trial, 'UniformOutput', false))';
     Incorrect_allSubj_allTrials{1,iFile}  = cell2mat(cellfun(@(x) mean(x(channelsROI, :), 1)', incorrTrials.trial, 'UniformOutput', false))';
 end
-
 groups = array2table(groups,'VariableNames',{'subj','mirror','mirrorLogical'});
 
 %% Now compute grand averages (needed for topoplots)
@@ -250,7 +241,6 @@ ERP_perSubj(:,4) = min(incorrect_perSubj(:,find(time>=timeWin(2,1),1,'first'):fi
 % Diff
 ERP_perSubj(:,5)  = ERP_perSubj(:,1) - ERP_perSubj(:,3);
 ERP_perSubj(:,6) = ERP_perSubj(:,2) - ERP_perSubj(:,4);
-
 % Export into tables used for computing stats in JASP
 rowNames = cellfun(@(x) ['curE' x 'a'], subjID, 'UniformOutput', false);
 colNames = cellfun(@(x) sprintf('%dms', x), num2cell(time*1000), 'UniformOutput', false);
@@ -260,14 +250,14 @@ incorrect_perSubjT  = [array2table(groups.mirror), ...
     array2table(incorrect_perSubj, 'RowNames', rowNames, 'VariableNames', colNames)];
 difference_perSubjT = [array2table(groups.mirror), ...
     array2table(difference_perSubj, 'RowNames', rowNames, 'VariableNames', colNames)];
-ERP_perSubjT        = [array2table(groups.mirror), ...
+ERP_perSubjT        = [array2table(groups.mirror, 'RowNames', rowNames, 'VariableNames', {'mirror'}), ...
     array2table(ERP_perSubj, 'RowNames', rowNames, 'VariableNames', ...
-    {sprintf('Corr_min%dto%dms',timeWin(1,1)*1000,timeWin(1,2)*1000),...
-    sprintf('Corr_min%dto%dms',timeWin(2,1)*1000,timeWin(2,2)*1000), ...
-    sprintf('Incorr_min%dto%dms',timeWin(1,1)*1000,timeWin(1,2)*1000),...
-    sprintf('Incorr_min%dto%dms',timeWin(2,1)*1000,timeWin(2,2)*1000),...
-    sprintf('Diff_min%dto%dms',timeWin(1,1)*1000,timeWin(1,2)*1000),...
-    sprintf('Diff_min%dto%dms',timeWin(2,1)*1000,timeWin(2,2)*1000)})];
+    {sprintf('min%dto%dms_Corr',timeWin(1,1)*1000,timeWin(1,2)*1000),...
+    sprintf('min%dto%dms_Corr',timeWin(2,1)*1000,timeWin(2,2)*1000), ...
+    sprintf('min%dto%dms_Incorr',timeWin(1,1)*1000,timeWin(1,2)*1000),...
+    sprintf('min%dto%dms_Incorr',timeWin(2,1)*1000,timeWin(2,2)*1000),...
+    sprintf('min%dto%dms_Diff',timeWin(1,1)*1000,timeWin(1,2)*1000),...
+    sprintf('min%dto%dms_Diff',timeWin(2,1)*1000,timeWin(2,2)*1000)})];
 
 %% Save csv files for JASP stats
 writetable(correct_perSubjT, fullfile(pathData, dirDataMatOut4, ...
@@ -283,7 +273,8 @@ if strcmp(erptype,'FRN') % Combine ERN & FRN into the same table if available
         sprintf('ERN_ValuesinROI_PerSubj_minTwoPeaks_BL%d_%d.csv', BL(1)*1000, BL(2)*1000)));
     ERN_perSubj = renamevars(ERN_perSubj, ERN_perSubj.Properties.VariableNames, cellfun(@(x) ['ERN_' x], ERN_perSubj.Properties.VariableNames, 'UniformOutput', false));
     FRN_perSubj = renamevars(ERP_perSubjT, ERP_perSubjT.Properties.VariableNames, cellfun(@(x) ['FRN_' x], ERP_perSubjT.Properties.VariableNames, 'UniformOutput', false));
-    writetable([ERP_perSubjT(:,1:2),ERN_perSubj(:,4:end), FRN_perSubj(:,3:end)], fullfile(pathData, dirDataMatOut3, ...
+    bothERNandFRN = [ERP_perSubjT(:,1),ERN_perSubj(:,3:end), FRN_perSubj(:,2:end)];
+    writetable(bothERNandFRN, fullfile(pathData, dirDataMatOut3, ...
         sprintf('bothERNandFRN_ValuesinROI_PerSubj_minTwoPeaks_BL%d_%d.csv', BL(1)*1000,BL(2)*1000)), 'WriteRowNames', true);
 elseif ~isnan(BL(1)) % Also save BL values (ONLY FOR ERN) so they can be used for FRN BL
     save(fullfile(pathData, dirDataMatOut2, sprintf('BL_valuesFromERN_%d_%d.mat', BL(1)*1000,BL(2)*1000)), 'allSubj_avgBLperiod');

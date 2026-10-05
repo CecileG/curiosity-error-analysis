@@ -2,24 +2,23 @@
 %
 % If you already have run this script for the current visit and erptype
 % and have figures saved in your folder, this script will prompt you to
-% confirm whether you want to proceed and overwrite the files (y), stop the
+% confirm whether you want to proceed and overwrite t(he files (y), stop the
 % process (q), save the new data in new files in the same folder as the old
 % ones (n -- not recommended, several files for the same participant will
 % coexist).
 %
+
 clear all
 close all
 
-% DEFINE THE MAIN PARAMETERS -- check that this is what you want
-flag_doPreprocessing = 1;      % REMOVES PAST PREPROCESSED DATA; Preprocess (1) or just load already preprocessed data & plot (0)
+%% DEFINE THE MAIN PARAMETERS -- check that this is what you want
 visit                = 1;      % Which visit? (12m/a = 1; 18m/b = 2; 24m/c = 3)
 erptype              = 'ERN';  % Which type of ERP? ('ERN' or 'FRN')
 
-% -- Electrodes of interest
-% We're using this to calculate the ERPs
+%% Define and load more things -- no need to change in theory
+% -- Electrodes of interest (we're using this to calculate the ERPs)
 channelsROI = [4,5,10,11,12,16,18,19];     % FC elec (Goupil)
 % channelsROI = [71,72,75,76, 67,74,77,82]; % Occ elec (can be used for data quality checks)
-
 % -- Time windows for the analysis
 % We're using this to plot topographies + extract peak values for stats csv
 % file (needs 2 time windows, else adapt the script for more flexibility)
@@ -33,9 +32,9 @@ end
 % We always use the ERN window for this: FRN loads the values calculated
 % from ERN -> always run ERN before FRN
 BL  = [-0.298 -.150];
-
-%% Load data
-
+% -- Other things
+visitLetterList = {'a','b','c'}; visitLetter = visitLetterList{visit};
+difficulties    = {"Easy", "Medium", "Hard", "xHard","Harder"};
 % -- Data folders
 % In theory, no need to edit this -- keep the same structure and modify
 % your local folder tree for compatibility
@@ -45,22 +44,17 @@ pathDataERN    = [filesep, fullfile(pathDataRoot,sprintf('Visit%d', visit), 'ERN
 dirDataMatIn = "3_ERPs_AllSubjInOneFile";
 dirFiguresPng  = fullfile(pwd, "Figures", sprintf('Visit%d', visit), "EEG");
 dirFiguresSvg  = fullfile(dirFiguresPng, "Figures final vectorised");
-visitLetterList = {'a','b','c'}; visitLetter = visitLetterList{visit};
-difficulties    = {"Easy", "Medium", "Hard", "xHard","Harder"};
-
-addpath("src")
-fSetUpFieldtripAndParallelPool(flagParallel=false,flagFT=true)
-
-fprintf("Loading the data -- this will take a while, please wait")
-
+% -- Add paths, parallel processing or not, and start FieldTrip
+addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=false,flagFT=true,flagLibraries=true);
+% -- Load the data
+fprintf("Loading the data, please wait....")
 load(fullfile(pathDataERN, dirDataMatIn, 'groups.mat'));
 load(fullfile(pathData, dirDataMatIn, sprintf('grandAvg_%s.mat', erptype)));
 load(fullfile(pathData, dirDataMatIn, sprintf('CorrIncorrDiff_PerSubj_%s.mat', erptype)));
 load(fullfile(pathData, dirDataMatIn, sprintf('CorrIncorrDiff_FT_PerSubj_%s.mat', erptype)));
 time = round(grandAvg.difference.time, 3);
-
 fprintf("  ----  Data loaded, now plotting \n")
-
 
 %% And now plot things
 % Create folders for figures if needed (but don't overwrite as ERN & FRN
@@ -87,7 +81,7 @@ else
 end
 data1       = Correct_allSubj;
 data2       = Incorrect_allSubj;
-[sig_clusters_all,stat] = fEEG_ClusteringWithFT(data1, data2, channelsROI,latency=timeWindow,tails=1); 
+[sig_clusters_all,stat] = fEEG_ClusteringWithFT(data1, data2, channelsROI,latency=timeWindow,tails=1);
 [figAlla, ~] = fEEG_PlotERP(dataA,dataB,...
     sig_clusters_all,timeAB,BL,erptype,subjList,'all',visit,y_lim);
 saveas(figAlla,fullfile(dirFiguresPng,sprintf('%s_%s',erptype,'all')),'png');
@@ -113,39 +107,34 @@ print(figNRa,fullfile(dirFiguresSvg,sprintf('%s_%s',erptype,'NR')),'-dsvg');
 %% 3 -- Topoplots for the different time windows (same as extracted earlier)
 if visit==1; z_lim = [-5 5]; else; z_lim = []; end
 for iWin = 1:size(timeWin,2)
-    if ~strcmp(erptype,'FRN') || iWin ~=1
-        timeWindow = timeWin(iWin,:);
-
+    timeWindow = timeWin(iWin,:);
+    % --- DIFFERENCE WAVES
+    %All
+    fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference, timeWindow, channelsROI, BL, erptype,visit,z_lim);
+    saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_%s%d',erptype,iWin)),'png');
+    print(fig1,fullfile(dirFiguresSvg,sprintf('topo_%s%d',erptype,iWin)),'-dsvg');
+    %Rs
+    fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference_R, timeWindow, channelsROI, BL, erptype,visit,z_lim);
+    saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_R_%s%d',erptype,iWin)),'png');
+    print(fig1,fullfile(dirFiguresSvg,sprintf('topo_R_%s%d',erptype,iWin)),'-dsvg');
+    %NRs
+    fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference_NR, timeWindow, channelsROI, BL, erptype,visit,z_lim);
+    saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_NR_%s%d',erptype,iWin)),'png');
+    print(fig1,fullfile(dirFiguresSvg,sprintf('topo_NR_%s%d',erptype,iWin)),'-dsvg');
+    % --- OPTIONAL: per condition (corr, incorr, diff waves)
+    if false
         %All
         fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference, timeWindow, channelsROI, BL, erptype,visit,z_lim);
         saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_%s%d',erptype,iWin)),'png');
         print(fig1,fullfile(dirFiguresSvg,sprintf('topo_%s%d',erptype,iWin)),'-dsvg');
-        fig2 = fEEG_PlotTopoplotConditions({grandAvg.correct, grandAvg.incorrect, grandAvg.difference},...
-            {'Correct trials','Incorrect trials','Difference'},...
-            timeWindow, channelsROI, BL, erptype, visit, 'all', []);
-        saveas(fig2,fullfile(dirFiguresPng,sprintf('topo_CorrIncorrDiff_%s%d',erptype,iWin)),'png');
-        print(fig2,fullfile(dirFiguresSvg,sprintf('topo_CorrIncorrDiff_%s%d',erptype,iWin)),'-dsvg');
-        
         %Rs
         fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference_R, timeWindow, channelsROI, BL, erptype,visit,z_lim);
         saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_R_%s%d',erptype,iWin)),'png');
         print(fig1,fullfile(dirFiguresSvg,sprintf('topo_R_%s%d',erptype,iWin)),'-dsvg');
-        fig2 = fEEG_PlotTopoplotConditions({grandAvg.correct_R, grandAvg.incorrect_R, grandAvg.difference_R},...
-            {'Correct trials','Incorrect trials','Difference'},...
-            timeWindow, channelsROI, BL, erptype, visit, 'Rs', []);
-        saveas(fig2,fullfile(dirFiguresPng,sprintf('topo_R_CorrIncorrDiff_%s%d',erptype,iWin)),'png');
-        print(fig2,fullfile(dirFiguresSvg,sprintf('topo_R_CorrIncorrDiff_%s%d',erptype,iWin)),'-dsvg');
-        
         %NRs
         fig1 = fEEG_PlotTopoplotDiffWave(grandAvg.difference_NR, timeWindow, channelsROI, BL, erptype,visit,z_lim);
         saveas(fig1,fullfile(dirFiguresPng,sprintf('topo_NR_%s%d',erptype,iWin)),'png');
         print(fig1,fullfile(dirFiguresSvg,sprintf('topo_NR_%s%d',erptype,iWin)),'-dsvg');
-        fig2 = fEEG_PlotTopoplotConditions({grandAvg.correct_NR, grandAvg.incorrect_NR, grandAvg.difference_NR},...
-            {'Correct trials','Incorrect trials','Difference'},...
-            timeWindow, channelsROI, BL, erptype, visit, 'NRs', []);
-        saveas(fig2,fullfile(dirFiguresPng,sprintf('topo_CorrIncorrDiff_NR_%s%d',erptype,iWin)),'png');
-        print(fig2,fullfile(dirFiguresSvg,sprintf('topo_CorrIncorrDiff_NR_%s%d',erptype,iWin)),'-dsvg');
-
     end
 end
 

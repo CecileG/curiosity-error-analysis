@@ -1,27 +1,30 @@
 %% Parse fixations and saccades
+%
 % This script has not been adpated for single threading -- parallel
 % processing toolbox needed
 %
+% /!\ can easily make your matlab crash or even your computer shut down --
+% this is the most memory/energy consuming step.
+% Pretty long if not using parellel processing
+%
 
-%% Define important variables
 clear all
 close all
 
+%% Define important variables
 visit        = 1;        % 1/2/3
 flagParallel = true;     % false/true --- false won't work here
 
-
-% Define more things and load data
-addpath("src");
-addpath(genpath(fullfile("src","libraries")));
-% Paths (normally no need to change)
+%% Define more things and load data
+% Define input/output paths (normally no need to change)
 pathData           = [filesep, fullfile('Users',getenv('USER'),'Data','curE',sprintf('Visit%d',visit),'eyetracking')];
 pathDataSummaryOut = fullfile(pathData, sprintf('3_whole-group-visit%d',visit));
 pathDataStatsOut   = fullfile(pathData, '4_OutputsForStats');
-util.fMkDirSafe(pathDataStatsOut);
-% Parallel processing
-fSetUpFieldtripAndParallelPool(flagParallel=flagParallel);
+% Add paths and parallel processing or not
 addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel, flagLibraries=true, flagFT=false);
+% For the outputs: make the folders or prompt to empty it if files are detected
+util.fMkDirSafe(pathDataStatsOut);
 % Load the data
 fprintf("Loading the big table.... \n");
 load(fullfile(pathDataSummaryOut,sprintf('all-visit%d.mat',visit)),"T");
@@ -117,6 +120,12 @@ save(fullfile(pathDataSummaryOut,sprintf('all-visit%d-ForParsing.mat',visit)),"T
 
 % Parse the fixations and save a bunch of stuff
 fprintf("Parsing fixations and saccades .... \n");
+% /!\ This used to make Matlab crash, by far the most memory consuming step
+% -> using less workers -> ok
+delete(gcp("nocreate"));
+if flagParallel
+    p = parpool(4); % using less workers or the computer crashes -- ADAPT if still too much for your computer
+end
 sessions  = unique(T.session);
 nSessions = numel(sessions);
 [fixParsing, T, Q] = fET_ParseFixationsCurE(nSessions, T, Q);
@@ -131,13 +140,13 @@ writetable(Q,fullfile(pathDataSummaryOut,sprintf('perPeriod-visit%d-Parsed.csv',
 fprintf("Reorganise into a table with 1 value per trial and not per sample.... \n");
 R = fET_ReorganiseTableIntoOneTrialPerRow(Q);
 save(fullfile(pathDataSummaryOut, sprintf("perTrial-visit%d.mat",visit,visit)),"R");
-writetable(R,fullfile(pathDataSummaryOut, sprintf("perTrial-visit%d.csv",visit,visit)));
+writetable(R,fullfile(pathDataSummaryOut, sprintf("perTrial-visit%d.csv",visit)));
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% REMOVE OUTLIERS
 
 fprintf("Now removing outliers.... \n");
 % First load eeg and ctrl variables to save all into 1 big file for stats
-[ctrl_vars, eegData, eegETsessions] = fGetCtrlAndEEGVars_curEM(visit, sessions);
+[ctrl_vars, eegData, eegETsessions] = fET_GetCtrlAndEEGVars_curEM(visit, sessions);
 % Keep only the participants with EEG & ET and create empty tables to export the data
 sessions = eegETsessions;
 R = R(ismember(R.session, sessions),:);
@@ -151,9 +160,7 @@ for iSession = 1:numel(sessions)
     threshMed  = 6; % for nFix and DecLat
     threshFreq = 5; % for  (too discrete for MAD)
     trialTypes = {'PriorCorr', 'PriorIncorr'};
-    for trialType = trialTypes
-        T_Stats = fET_StatsWithOutlierRemoval(idx, session, R, T_Stats, trialType, threshMed=threshMed, threshFreq=threshFreq);
-    end
+    T_Stats = fET_StatsWithOutlierRemoval(idx, session, R, T_Stats, trialTypes, threshMed=threshMed, threshFreq=threshFreq);
     % Calculate how many (included) trials there are per condition for each participant
     T_Stats = fET_GetNtrials(idx, session, T_Stats);
 end

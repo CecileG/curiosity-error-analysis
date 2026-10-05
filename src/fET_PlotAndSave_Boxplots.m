@@ -1,4 +1,4 @@
-function fET_plotAndSave_Boxplots(T, pathFiguresPng, pathFiguresSvg, groups, trialTypes, variables, args, opts)
+function fET_PlotAndSave_Boxplots(T, pathFiguresPng, pathFiguresSvg, groups, trialTypes, variables, args, opts)
 
 arguments
     T
@@ -10,7 +10,7 @@ arguments
     args
     opts.yL % if you want an array of limits for different variables
 end
-idx = fGetSessions(groups, T); % Get participant indices per group
+idx = util.fGetSessions(groups, T); % Get participant indices per group
 if ~isempty(trialTypes)
     % Loop over _groups and variables_ and plot all _trials types_ in the same plot
     for i_Group = 1:size(groups,2)
@@ -52,7 +52,7 @@ end
         fig = figure;
         % Parse the parameters from a structure to a cell array
         varargin = namedargs2cell(args);
-        fBoxplotWithDotsAndColors(data, varargin{:});
+        util.fBoxplotWithDotsAndColors(data, varargin{:});
         % Save big figure to png
         title(sprintf('%s - %s', variable, group))
         saveas(fig,fullfile(pathFiguresPng,sprintf('%s_%s_%s',group, variable,strjoin(trialTypes,'-'))),'png');

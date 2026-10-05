@@ -10,7 +10,7 @@ arguments
     opts.prctiles double    = [1 99]
 end
 
-idx = fGetSessions(groups, ctrl_vars);
+idx = util.fGetSessions(groups, ctrl_vars);
 
 % Take out participant outliers (per group)
 allOutliers = [];

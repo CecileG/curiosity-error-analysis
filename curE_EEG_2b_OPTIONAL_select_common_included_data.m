@@ -19,15 +19,17 @@ erptypes     = ["ERN" "FRN"];
 visit        = 1;
 
 %% Set things up
-addpath("src")
-fSetUpFieldtripAndParallelPool(flagParallel=false,flagFT=true)
+% Define input/output paths (normally no need to change)
 pathData         = filesep + fullfile('Users',getenv('USER'),'Data','curE',sprintf('Visit%d', visit), erptypes);
 dirDataMatIn     = "2_matIncluded";
 dirDataCommonOut = dirDataMatIn + "Common";
-arrayfun(@util.fMkDirSafe, fullfile(pathData, dirDataCommonOut));   % make the folders, or prompt to empty the folder if files are detected in
+% Add paths, parallel processing or not, and start FieldTrip
+addpath("src");
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel, flagFT=flagFT);
+% For the outputs: make the folders or prompt to empty it if files are detected
+arrayfun(@util.fMkDirSafe, fullfile(pathData, dirDataCommonOut));
 matnames = arrayfun(@(x)string({dir(fullfile(x, dirDataMatIn, "*.mat")).name}), pathData, UniformOutput=false);
 visit_char = char('a' + visit - 1);
-
 % Assumes a string of type curXNNN where X is supposed to be a letter (eg curE) and NNN a 3-digit number (can have leading zeros e.g., 003)
 ids = cellfun(@(m)string(regexp(m, ['cur\w(\d\d\d)' visit_char], 'tokens','once')), matnames, UniformOutput=false);
 [ids_common, ids_index] = fGetCommon_(ids);

@@ -44,6 +44,9 @@
 % Written by Dimitrios Askitis & Cécile Gal
 %
 
+clear all
+close all
+
 %% Define the main parameters
 % (see fGetMatFilesFromMff function below for more options and details)
 erpType      = "ERN";    % "ERN"/"FRN"
@@ -52,7 +55,7 @@ flagParallel = true;     % false/true
 
 %% Set things up
 addpath("src")
-fSetUpFieldtripAndParallelPool(flagParallel=flagParallel,flagFT=true)
+util.fSetUpFieldtripAndLibrariesAndParallelPool(flagParallel=flagParallel,flagFT=true)
 
 %% Do the thing
 f_GetMatFilesFromMff(erpType, visit, flagParallel=flagParallel)
