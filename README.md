@@ -54,14 +54,12 @@ Then run the ET scripts:
 
 The scripts output files in multiple folders.
 
-Use the csv files in this folder to conduct the statistical analyses:
-
-/Users/[yourusername]/Data/curE/Visit1/eyetracking copy/4_OutputsForStats
-
-
+Use the csv files in this folder to conduct the statistical analyses and
+check the supplementary material tables:
+    /Users/[yourusername]/Data/curE/Visit1/eyetracking/4_OutputsForStats
 JASP files pointing to the csv files outputted are provided for running
-statistical analyses.
-
+statistical analyses here:
+    /Users/[yourusername]/Data/curE/Visit1/Stats
 
 
 The data is sensitive & thus not provided here, please get in touch with
