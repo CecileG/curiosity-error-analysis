@@ -1,5 +1,7 @@
 # curEM: match-to-sample task EEG & ETanalysis, visit 1
 
+Find the latest version on https://github.com/earlychildcog/curiosity-error-analysis/
+
 
 To replicate the findings of the paper 'I err, therefore I am: Neural
 signature of error-monitoring predicts self-awareness in infants':
