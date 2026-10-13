@@ -5,7 +5,7 @@
 % unfrotunately went unoticed for a while and have to correct it
 % after the fact)
 
-function thisData = fET_upSampleIfNeeded(thisData,t)
+function thisData = fET_UpSampleIfNeeded(thisData,t)
 
 if median(diff(t)) > 2.1
     [~, lx, ly] = fET_GazeUpsample(t, thisData.gaze.L(:,1), thisData.gaze.L(:,2));

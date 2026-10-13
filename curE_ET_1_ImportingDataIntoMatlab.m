@@ -38,7 +38,7 @@ util.fMkDirSafe(pathDataSummaryOut);
 % identify good pupil samples based on set min/max, interpolate between
 % bad samples for gap smaller than max length & smooth
 % --- To see what vars are in the edf files (just for checking)
-% varlistFromEdf("data/eyetracking/edf-visit1/curE002a.edf")
+% varlistFromEdf(fullfile(pathDataEdfIn,"curE002a.edf"))
 % --- To read the edf data
 getMatFromEdfBatch(pathDataEdfIn, pathDataMatOut, messageStart="attget start @",varinclude=[...
     "trialtype" "difficulty" "trialno" "objL" "objR" "objT" "result" "delayFirstFixT" "delayFirstFixB"...
@@ -56,7 +56,7 @@ util.fMkDirSafe(postMatFolder, flagCleanDir='force_clean');
 for iSubj = 1:numel(preprocData)
     thisData = preprocData(iSubj);
     try
-        thisData = fET_upSampleIfNeeded(thisData,thisData.gaze.t_ms);
+        thisData = fET_UpSampleIfNeeded(thisData,thisData.gaze.t_ms);
         util.fParsave(fullfile(postMatFolder, thisData.filename), thisData);
         fprintf("Saved preprocessed file %s\n", thisData.filename)
     catch err
